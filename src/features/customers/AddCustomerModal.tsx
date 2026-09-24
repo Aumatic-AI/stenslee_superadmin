@@ -19,6 +19,10 @@ interface Props {
   open: boolean;
   onClose: () => void;
   onCreated: (customer: NewCustomer) => void;
+  // When set, the organization is fixed (e.g. from an org's own detail
+  // page) and no organization picker is shown -- mirrors AddStaffModal.
+  fixedOrganizationId?: string;
+  fixedOrganizationName?: string;
 }
 
 function formatPhone(value: string) {
@@ -28,9 +32,9 @@ function formatPhone(value: string) {
   return `(${d.slice(0, 3)}) ${d.slice(3, 6)}-${d.slice(6)}`;
 }
 
-export default function AddCustomerModal({ open, onClose, onCreated }: Props) {
+export default function AddCustomerModal({ open, onClose, onCreated, fixedOrganizationId, fixedOrganizationName }: Props) {
   const [organizations, setOrganizations] = useState<{ value: string; label: string }[]>([]);
-  const [organizationId, setOrganizationId] = useState("");
+  const [organizationId, setOrganizationId] = useState(fixedOrganizationId ?? "");
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [error, setError] = useState("");
@@ -43,8 +47,10 @@ export default function AddCustomerModal({ open, onClose, onCreated }: Props) {
     async function init() {
       setName("");
       setPhone("");
-      setOrganizationId("");
+      setOrganizationId(fixedOrganizationId ?? "");
       setError("");
+
+      if (fixedOrganizationId) return;
 
       const supabase = createSupabaseBrowserClient();
       const { data } = await supabase.from("organizations").select("id, name").order("name", { ascending: true });
@@ -52,7 +58,7 @@ export default function AddCustomerModal({ open, onClose, onCreated }: Props) {
     }
     init();
     return () => { cancelled = true; };
-  }, [open]);
+  }, [open, fixedOrganizationId]);
 
   const canSubmit = name.trim().length > 0 && phone.replace(/\D/g, "").length === 10 && organizationId.length > 0;
 
@@ -95,13 +101,22 @@ export default function AddCustomerModal({ open, onClose, onCreated }: Props) {
   return (
     <Modal open={open} onClose={onClose} title="Add Customer">
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-        <Select
-          label="Organization"
-          value={organizationId}
-          onChange={setOrganizationId}
-          options={organizations}
-          placeholder="Select an organization…"
-        />
+        {fixedOrganizationId ? (
+          <div className="flex flex-col gap-1.5">
+            <span className="text-xs font-mono tracking-[0.15em] uppercase text-muted">Organization</span>
+            <p className="text-ink text-sm bg-surface-2 border border-cleo-border rounded-xl px-4 py-2.5">
+              {fixedOrganizationName}
+            </p>
+          </div>
+        ) : (
+          <Select
+            label="Organization"
+            value={organizationId}
+            onChange={setOrganizationId}
+            options={organizations}
+            placeholder="Select an organization…"
+          />
+        )}
         <Input label="Full Name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Customer full name" />
         <Input
           label="Phone"

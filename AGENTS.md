@@ -70,10 +70,9 @@ through a Node API.
 | `/login` | Platform admin sign-in |
 | `/dashboard` | Platform-wide KPIs, recent orgs, needs-attention list |
 | `/organizations` | All studio tenants — search, status filter, create |
-| `/organizations/[id]` | Org detail — plan, status, staff roster (+ add staff), stats |
+| `/organizations/[id]` | Org detail — tabbed: Analytics, Plans, **Permissions** (status + full override grid), Staff, Customers |
 | `/plans` | Subscription tiers |
 | `/plans/new`, `/plans/[id]` | Plan editor — pricing + full feature grid |
-| `/permissions` | **Per-org feature overrides** — pick an org, see plan defaults side by side with any override, edit |
 | `/sessions` | Cross-tenant session list (read-only) |
 | `/customers` | Cross-tenant customer list — search, org filter, create, edit |
 | `/designers` | Cross-tenant staff list (designers + admins) — search, org filter, create |
@@ -91,17 +90,34 @@ through a Node API.
   shape and back.
 - `src/features/plans/PlanFeatureEditor.tsx` — the reusable 19-key grid used
   by both the new-plan and edit-plan pages.
-- `src/features/permissions/PermissionsMatrix.tsx` — same idea, but for
-  per-org overrides: shows the plan default next to an optional override
-  toggle for each feature.
+- `src/features/permissions/PermissionsMatrix.tsx` — the per-org override
+  grid: each row shows the plan default badge next to a toggle (and a limit
+  input, when relevant) that directly edits the *effective* value for this
+  org. No separate "enable override first" step -- change a row and it's a
+  pending edit; save it and it becomes an explicit override row, or gets
+  deleted if you changed it back to match the plan.
+- `src/components/ui/Tabs.tsx` — generic reusable tab bar (segmented-pill
+  style). `/organizations/[id]` is its only consumer today; add a tab
+  anywhere else in this app by passing another `{ key, label }`.
+- `src/features/organizations/tabs/` — the five tabs
+  `/organizations/[id]` is built from (Analytics, Plans, Permissions, Staff,
+  Customers). The parent page keeps a tab mounted (hidden via CSS, not
+  unmounted) once you've opened it once, specifically so switching away
+  from Permissions mid-edit doesn't silently discard unsaved changes.
+  `PermissionsTab.tsx` is the full former `/permissions` page's logic,
+  now scoped to the org you're already looking at instead of a separate
+  route with its own organization picker.
 - `src/components/layout/AdminShell.tsx` — sidebar/top-bar/mobile-nav shell,
   gates on a live `platform_admins` row (not just a Supabase session) the
   same way studio's `AdminSidebarShell` gates on `staff`.
 - `src/features/staff/AddStaffModal.tsx` — creates a `staff` row (designer
   or admin) for any organization. Used from both `/designers` (organization
-  picker shown) and `/organizations/[id]`'s Staff card (`fixedOrganizationId`
+  picker shown) and `/organizations/[id]`'s Staff tab (`fixedOrganizationId`
   passed, no picker). Same stateless-`signUp()` pattern as
   `AddPlatformAdminModal` in `src/features/settings/`.
+- `src/features/customers/AddCustomerModal.tsx` — same `fixedOrganizationId`
+  pattern as `AddStaffModal`, used from both `/customers` (picker shown)
+  and `/organizations/[id]`'s Customers tab (no picker).
 - `src/components/ui/Select.tsx` — the custom dropdown primitive (no native
   `<select>`) — used for the organization filter/picker on `/customers`,
   `/designers`, and both add-staff/add-customer modals.

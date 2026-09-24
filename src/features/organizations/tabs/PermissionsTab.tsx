@@ -1,26 +1,14 @@
 "use client";
 
-import { Suspense, useEffect, useMemo, useState } from "react";
-import { useSearchParams } from "next/navigation";
-import Link from "next/link";
+import { useEffect, useMemo, useState } from "react";
 import { createSupabaseBrowserClient } from "@/lib/supabase-client";
 import { FEATURE_KEYS, type FeatureKey } from "@/lib/feature-registry";
 import PermissionsMatrix, {
   type RowValueState,
   type PlanDefaultState,
 } from "@/features/permissions/PermissionsMatrix";
-import PageHeader from "@/components/ui/PageHeader";
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
-import EmptyState from "@/components/ui/EmptyState";
-
-interface Org {
-  id: string;
-  name: string;
-  slug: string;
-  plan_id: string | null;
-  plans: { name: string } | null;
-}
 
 function emptyPlanDefaults(): PlanDefaultState {
   return Object.fromEntries(FEATURE_KEYS.map((k) => [k, { enabled: false, limit_value: null }])) as PlanDefaultState;
@@ -30,48 +18,38 @@ function rowsEqual(a: { enabled: boolean; limit_value: number | null }, b: { ena
   return a.enabled === b.enabled && a.limit_value === b.limit_value;
 }
 
-function PermissionsContent() {
-  const params = useSearchParams();
-  const orgId = params.get("org");
+const STATUS_OPTIONS = ["active", "suspended", "cancelled"] as const;
 
-  const [org, setOrg] = useState<Org | null>(null);
-  const [notFound, setNotFound] = useState(false);
+interface Props {
+  organizationId: string;
+  planId: string | null;
+  status: string;
+  savingStatus: boolean;
+  onUpdateStatus: (status: string) => void;
+}
+
+export default function PermissionsTab({ organizationId, planId, status, savingStatus, onUpdateStatus }: Props) {
   const [planDefaults, setPlanDefaults] = useState<PlanDefaultState>(emptyPlanDefaults());
   const [values, setValues] = useState<RowValueState>(emptyPlanDefaults());
   const [originalValues, setOriginalValues] = useState<RowValueState>(emptyPlanDefaults());
-  const [loading, setLoading] = useState(!!orgId);
+  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
   useEffect(() => {
-    if (!orgId) return;
     let cancelled = false;
 
     async function load() {
       setLoading(true);
       const supabase = createSupabaseBrowserClient();
-      const { data: orgData } = await supabase
-        .from("organizations")
-        .select("id, name, slug, plan_id, plans(name)")
-        .eq("id", orgId!)
-        .maybeSingle();
-
-      if (cancelled) return;
-      if (!orgData) {
-        setNotFound(true);
-        setLoading(false);
-        return;
-      }
-      setOrg(orgData as unknown as Org);
-
       const [{ data: planFeatures }, { data: overrideRows }] = await Promise.all([
-        orgData.plan_id
-          ? supabase.from("plan_features").select("feature_key, enabled, limit_value").eq("plan_id", orgData.plan_id)
+        planId
+          ? supabase.from("plan_features").select("feature_key, enabled, limit_value").eq("plan_id", planId)
           : Promise.resolve({ data: [] }),
         supabase
           .from("organization_feature_overrides")
           .select("feature_key, enabled, limit_value")
-          .eq("organization_id", orgId!),
+          .eq("organization_id", organizationId),
       ]);
 
       if (cancelled) return;
@@ -84,10 +62,6 @@ function PermissionsContent() {
       }
       setPlanDefaults(defaults);
 
-      // Effective value per key: an override always wins wholesale, otherwise
-      // it's whatever the plan grants. This is what the toggle/limit input
-      // shows and edits directly -- there's no separate "has an override"
-      // step to turn on first.
       const overrideByKey = new Map(
         (overrideRows ?? [])
           .filter((r) => (FEATURE_KEYS as readonly string[]).includes(r.feature_key))
@@ -104,7 +78,9 @@ function PermissionsContent() {
     }
     load();
     return () => { cancelled = true; };
-  }, [orgId]);
+    // planId changing (a plan switch on the Plans tab) should refresh what
+    // "Plan: X" badges show here too.
+  }, [organizationId, planId]);
 
   const changedKeys = useMemo(() => {
     const changed = new Set<FeatureKey>();
@@ -122,19 +98,15 @@ function PermissionsContent() {
   }
 
   async function handleSave() {
-    if (!org) return;
     setSaving(true);
     setError("");
     const supabase = createSupabaseBrowserClient();
     const { data: { user } } = await supabase.auth.getUser();
 
-    // Only touch rows that actually changed. Within those, a value that now
-    // exactly matches the plan default needs no override row at all (delete
-    // it if one existed); anything else needs an explicit override.
     const toUpsert = Array.from(changedKeys)
       .filter((key) => !rowsEqual(values[key], planDefaults[key]))
       .map((key) => ({
-        organization_id: org.id,
+        organization_id: organizationId,
         feature_key: key,
         enabled: values[key].enabled,
         limit_value: values[key].limit_value,
@@ -150,7 +122,7 @@ function PermissionsContent() {
         ? supabase
             .from("organization_feature_overrides")
             .delete()
-            .eq("organization_id", org.id)
+            .eq("organization_id", organizationId)
             .in("feature_key", toDelete)
         : Promise.resolve({ error: null }),
     ]);
@@ -164,51 +136,49 @@ function PermissionsContent() {
   }
 
   return (
-    <div className="flex flex-col gap-6">
-      <div>
-        <Link
-          href={org ? `/organizations/${org.id}` : "/organizations"}
-          className="inline-flex items-center gap-1.5 text-muted hover:text-gold transition-colors text-xs font-mono tracking-wider mb-3"
-        >
-          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
-          </svg>
-          {org ? `Back to ${org.name}` : "Back to Organizations"}
-        </Link>
-        <PageHeader
-          title="Permissions"
-          description="Per-organization feature overrides. A changed row here always wins over the plan default."
-        />
-      </div>
+    <div className="flex flex-col gap-6 pb-20">
+      <Card className="p-5 flex flex-col gap-3">
+        <h2 className="font-cinzel text-sm font-bold tracking-wide text-ink uppercase">Status</h2>
+        <div className="flex flex-wrap gap-2">
+          {STATUS_OPTIONS.map((s) => (
+            <button
+              key={s}
+              onClick={() => onUpdateStatus(s)}
+              disabled={savingStatus}
+              className={`px-4 py-2 rounded-xl border text-xs font-mono uppercase tracking-wider transition-colors cursor-pointer disabled:opacity-50 ${
+                status === s
+                  ? s === "active"
+                    ? "border-success bg-success/10 text-success"
+                    : s === "suspended"
+                    ? "border-error bg-error/10 text-error"
+                    : "border-muted bg-surface-2 text-muted"
+                  : "border-cleo-border text-muted hover:border-gold/40"
+              }`}
+            >
+              {s}
+            </button>
+          ))}
+        </div>
+        <p className="text-muted text-xs">
+          Suspending blocks staff sign-in at the studio app; cancelling is intended for offboarded studios.
+        </p>
+      </Card>
 
-      {!orgId || notFound ? (
-        <Card className="p-10">
-          <EmptyState message="Open an organization and click “Manage Overrides” to edit its permissions." />
-        </Card>
-      ) : loading ? (
+      {error && <p className="text-error text-sm font-mono">{error}</p>}
+
+      {loading ? (
         <div className="flex flex-col gap-3">
           {[...Array(4)].map((_, i) => (
             <div key={i} className="h-24 skeleton rounded-xl" />
           ))}
         </div>
       ) : (
-        <div className="flex flex-col gap-6 pb-20">
-          <div>
-            <h2 className="font-cinzel text-lg font-bold text-ink">{org!.name}</h2>
-            <p className="text-muted text-xs font-mono">
-              Plan: {org!.plans?.name ?? "No plan assigned"}
-            </p>
-          </div>
-
-          {error && <p className="text-error text-sm font-mono">{error}</p>}
-
-          <PermissionsMatrix
-            planDefaults={planDefaults}
-            values={values}
-            changedKeys={changedKeys}
-            onChange={(key, patch) => setValues((v) => ({ ...v, [key]: { ...v[key], ...patch } }))}
-          />
-        </div>
+        <PermissionsMatrix
+          planDefaults={planDefaults}
+          values={values}
+          changedKeys={changedKeys}
+          onChange={(key, patch) => setValues((v) => ({ ...v, [key]: { ...v[key], ...patch } }))}
+        />
       )}
 
       {isDirty && (
@@ -230,13 +200,5 @@ function PermissionsContent() {
         </div>
       )}
     </div>
-  );
-}
-
-export default function PermissionsPage() {
-  return (
-    <Suspense fallback={<div className="h-96 skeleton rounded-2xl" />}>
-      <PermissionsContent />
-    </Suspense>
   );
 }
