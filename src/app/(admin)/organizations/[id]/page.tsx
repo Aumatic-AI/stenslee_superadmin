@@ -10,6 +10,7 @@ import PlansTab from "@/features/organizations/tabs/PlansTab";
 import PermissionsTab from "@/features/organizations/tabs/PermissionsTab";
 import StaffTab from "@/features/organizations/tabs/StaffTab";
 import CustomersTab from "@/features/organizations/tabs/CustomersTab";
+import LibraryTab from "@/features/organizations/tabs/LibraryTab";
 
 interface Org {
   id: string;
@@ -40,6 +41,7 @@ const TABS: TabDef[] = [
   { key: "permissions", label: "Permissions" },
   { key: "staff", label: "Staff" },
   { key: "customers", label: "Customers" },
+  { key: "library", label: "Library" },
 ];
 
 export default function OrganizationDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -170,6 +172,12 @@ export default function OrganizationDetailPage({ params }: { params: Promise<{ i
       {visitedTabs.has("customers") && (
         <div className={activeTab === "customers" ? "" : "hidden"}>
           <CustomersTab organizationId={org.id} organizationName={org.name} />
+        </div>
+      )}
+
+      {visitedTabs.has("library") && (
+        <div className={activeTab === "library" ? "" : "hidden"}>
+          <LibraryTab organizationId={org.id} />
         </div>
       )}
     </div>
