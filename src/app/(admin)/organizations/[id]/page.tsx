@@ -11,6 +11,7 @@ import PermissionsTab from "@/features/organizations/tabs/PermissionsTab";
 import StaffTab from "@/features/organizations/tabs/StaffTab";
 import CustomersTab from "@/features/organizations/tabs/CustomersTab";
 import LibraryTab from "@/features/organizations/tabs/LibraryTab";
+import CreditsTab from "@/features/organizations/tabs/CreditsTab";
 
 interface Org {
   id: string;
@@ -19,6 +20,7 @@ interface Org {
   status: string;
   plan_id: string | null;
   created_at: string;
+  ai_credits_remaining: number;
 }
 
 interface Plan {
@@ -42,6 +44,7 @@ const TABS: TabDef[] = [
   { key: "staff", label: "Staff" },
   { key: "customers", label: "Customers" },
   { key: "library", label: "Library" },
+  { key: "credits", label: "AI Credits" },
 ];
 
 export default function OrganizationDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -74,7 +77,7 @@ export default function OrganizationDetailPage({ params }: { params: Promise<{ i
       const supabase = createSupabaseBrowserClient();
       const [{ data: orgData }, { data: planData }, { data: staffData }, { count: sessions }, { count: customers }] =
         await Promise.all([
-          supabase.from("organizations").select("id, name, slug, status, plan_id, created_at").eq("id", id).maybeSingle(),
+          supabase.from("organizations").select("id, name, slug, status, plan_id, created_at, ai_credits_remaining").eq("id", id).maybeSingle(),
           supabase.from("plans").select("id, name").eq("is_active", true).order("price_cents", { ascending: true }),
           supabase
             .from("staff")
@@ -178,6 +181,16 @@ export default function OrganizationDetailPage({ params }: { params: Promise<{ i
       {visitedTabs.has("library") && (
         <div className={activeTab === "library" ? "" : "hidden"}>
           <LibraryTab organizationId={org.id} />
+        </div>
+      )}
+
+      {visitedTabs.has("credits") && (
+        <div className={activeTab === "credits" ? "" : "hidden"}>
+          <CreditsTab
+            organizationId={org.id}
+            creditsRemaining={org.ai_credits_remaining}
+            onUpdated={(newBalance) => setOrg({ ...org, ai_credits_remaining: newBalance })}
+          />
         </div>
       )}
     </div>

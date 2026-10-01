@@ -6,11 +6,14 @@ import Modal from "@/components/ui/Modal";
 import Input from "@/components/ui/Input";
 import Button from "@/components/ui/Button";
 import Select from "@/components/ui/Select";
+import { DEFAULT_COUNTRY_CODE, combinePhone, isValidPhone, sanitizeCountryCodeInput, sanitizePhoneNumberInput } from "@/lib/phone";
 
 interface NewCustomer {
   id: string;
   name: string;
   phone: string;
+  phone_country_code: string;
+  phone_number: string;
   created_at: string;
   organization_id: string;
 }
@@ -25,18 +28,12 @@ interface Props {
   fixedOrganizationName?: string;
 }
 
-function formatPhone(value: string) {
-  const d = value.replace(/\D/g, "").slice(0, 10);
-  if (d.length <= 3) return d;
-  if (d.length <= 6) return `(${d.slice(0, 3)}) ${d.slice(3)}`;
-  return `(${d.slice(0, 3)}) ${d.slice(3, 6)}-${d.slice(6)}`;
-}
-
 export default function AddCustomerModal({ open, onClose, onCreated, fixedOrganizationId, fixedOrganizationName }: Props) {
   const [organizations, setOrganizations] = useState<{ value: string; label: string }[]>([]);
   const [organizationId, setOrganizationId] = useState(fixedOrganizationId ?? "");
   const [name, setName] = useState("");
-  const [phone, setPhone] = useState("");
+  const [countryCode, setCountryCode] = useState(DEFAULT_COUNTRY_CODE);
+  const [phoneNumber, setPhoneNumber] = useState("");
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
 
@@ -46,7 +43,8 @@ export default function AddCustomerModal({ open, onClose, onCreated, fixedOrgani
 
     async function init() {
       setName("");
-      setPhone("");
+      setCountryCode(DEFAULT_COUNTRY_CODE);
+      setPhoneNumber("");
       setOrganizationId(fixedOrganizationId ?? "");
       setError("");
 
@@ -60,7 +58,7 @@ export default function AddCustomerModal({ open, onClose, onCreated, fixedOrgani
     return () => { cancelled = true; };
   }, [open, fixedOrganizationId]);
 
-  const canSubmit = name.trim().length > 0 && phone.replace(/\D/g, "").length === 10 && organizationId.length > 0;
+  const canSubmit = name.trim().length > 0 && isValidPhone(countryCode, phoneNumber) && organizationId.length > 0;
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -69,6 +67,7 @@ export default function AddCustomerModal({ open, onClose, onCreated, fixedOrgani
     setError("");
 
     const supabase = createSupabaseBrowserClient();
+    const phone = combinePhone(countryCode, phoneNumber);
 
     const { data: existing } = await supabase
       .from("customers")
@@ -85,8 +84,8 @@ export default function AddCustomerModal({ open, onClose, onCreated, fixedOrgani
 
     const { data: customer, error: insertError } = await supabase
       .from("customers")
-      .insert({ name: name.trim(), phone, organization_id: organizationId })
-      .select("id, name, phone, created_at, organization_id")
+      .insert({ name: name.trim(), phone_country_code: countryCode, phone_number: phoneNumber, organization_id: organizationId })
+      .select("id, name, phone, phone_country_code, phone_number, created_at, organization_id")
       .single();
 
     setSaving(false);
@@ -118,14 +117,27 @@ export default function AddCustomerModal({ open, onClose, onCreated, fixedOrgani
           />
         )}
         <Input label="Full Name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Customer full name" />
-        <Input
-          label="Phone"
-          type="tel"
-          inputMode="numeric"
-          value={phone}
-          onChange={(e) => setPhone(formatPhone(e.target.value))}
-          placeholder="(555) 000-0000"
-        />
+        <div className="flex flex-col gap-1.5">
+          <span className="text-xs font-mono tracking-[0.15em] uppercase text-muted">Phone</span>
+          <div className="flex gap-2">
+            <Input
+              type="tel"
+              inputMode="tel"
+              value={countryCode}
+              onChange={(e) => setCountryCode(sanitizeCountryCodeInput(e.target.value))}
+              placeholder="+91"
+              className="w-20 flex-shrink-0 text-center"
+            />
+            <Input
+              type="tel"
+              inputMode="numeric"
+              value={phoneNumber}
+              onChange={(e) => setPhoneNumber(sanitizePhoneNumberInput(e.target.value))}
+              placeholder="98765 43210"
+              className="flex-1 min-w-0"
+            />
+          </div>
+        </div>
 
         {error && <p className="text-error text-sm font-mono">{error}</p>}
 

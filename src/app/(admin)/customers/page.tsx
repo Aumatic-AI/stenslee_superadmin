@@ -15,6 +15,8 @@ interface CustomerRow {
   id: string;
   name: string;
   phone: string;
+  phone_country_code: string;
+  phone_number: string;
   created_at: string;
   organization_id: string;
   organizations: { name: string } | null;
@@ -34,7 +36,7 @@ export default function CustomersPage() {
     Promise.all([
       supabase
         .from("customers")
-        .select("id, name, phone, created_at, organization_id, organizations(name)")
+        .select("id, name, phone, phone_country_code, phone_number, created_at, organization_id, organizations(name)")
         .order("created_at", { ascending: false })
         .limit(200),
       supabase.from("organizations").select("id, name").order("name", { ascending: true }),
