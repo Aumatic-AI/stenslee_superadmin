@@ -21,6 +21,7 @@ export default function EditPlanPage({ params }: { params: Promise<{ id: string 
   const [price, setPrice] = useState("0");
   const [interval, setInterval] = useState<"month" | "year">("month");
   const [isActive, setIsActive] = useState(true);
+  const [aiCredits, setAiCredits] = useState("250");
   const [grid, setGrid] = useState(emptyFeatureGrid());
   const [notFound, setNotFound] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -46,6 +47,7 @@ export default function EditPlanPage({ params }: { params: Promise<{ id: string 
       setPrice(String(plan.price_cents / 100));
       setInterval(plan.billing_interval);
       setIsActive(plan.is_active);
+      setAiCredits(String(plan.ai_credits_included ?? 250));
       setGrid(gridFromRows(features ?? []));
       setLoading(false);
     })();
@@ -68,6 +70,7 @@ export default function EditPlanPage({ params }: { params: Promise<{ id: string 
         price_cents: Math.round(Number(price) * 100) || 0,
         billing_interval: interval,
         is_active: isActive,
+        ai_credits_included: Math.max(0, Math.round(Number(aiCredits)) || 0),
       })
       .eq("id", id);
 
@@ -141,6 +144,17 @@ export default function EditPlanPage({ params }: { params: Promise<{ id: string 
             <span className="text-sm text-ink">Active (visible for new signups)</span>
           </div>
         </div>
+        <Input
+          label="AI Credits Included"
+          type="number"
+          min={0}
+          value={aiCredits}
+          onChange={(e) => setAiCredits(e.target.value)}
+          className="max-w-[12rem]"
+        />
+        <p className="text-muted text-xs -mt-2">
+          Set on an org whenever it&rsquo;s switched onto this plan. Spent 10 per generated image.
+        </p>
       </Card>
 
       <div>

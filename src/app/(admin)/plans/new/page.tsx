@@ -19,6 +19,7 @@ export default function NewPlanPage() {
   const [price, setPrice] = useState("0");
   const [interval, setInterval] = useState<"month" | "year">("month");
   const [isActive, setIsActive] = useState(true);
+  const [aiCredits, setAiCredits] = useState("250");
   const [grid, setGrid] = useState(emptyFeatureGrid());
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
@@ -40,6 +41,7 @@ export default function NewPlanPage() {
         price_cents: Math.round(Number(price) * 100) || 0,
         billing_interval: interval,
         is_active: isActive,
+        ai_credits_included: Math.max(0, Math.round(Number(aiCredits)) || 0),
       })
       .select("id")
       .single();
@@ -111,6 +113,17 @@ export default function NewPlanPage() {
             <span className="text-sm text-ink">Active (visible for new signups)</span>
           </div>
         </div>
+        <Input
+          label="AI Credits Included"
+          type="number"
+          min={0}
+          value={aiCredits}
+          onChange={(e) => setAiCredits(e.target.value)}
+          className="max-w-[12rem]"
+        />
+        <p className="text-muted text-xs -mt-2">
+          Set on an org whenever it&rsquo;s switched onto this plan. Spent 10 per generated image.
+        </p>
       </Card>
 
       <div>

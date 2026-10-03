@@ -51,7 +51,7 @@ export default function CreditsTab({ organizationId, creditsRemaining, onUpdated
       <div>
         <h2 className="font-cinzel text-sm font-bold tracking-wide text-ink uppercase">AI Credits</h2>
         <p className="text-muted text-xs mt-1">
-          10 credits per generated image, across AI Design, Rework, Flash Isolate, and Placement. Never auto-refills — top up here.
+          10 credits per generated image, across AI Design, Rework, Flash Isolate, and Placement. Doesn&rsquo;t auto-refill on its own — top up here, or switch the org&rsquo;s plan on the Plans tab to reset it to that plan&rsquo;s included amount.
         </p>
       </div>
 

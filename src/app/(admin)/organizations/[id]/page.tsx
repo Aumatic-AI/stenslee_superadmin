@@ -26,6 +26,7 @@ interface Org {
 interface Plan {
   id: string;
   name: string;
+  ai_credits_included: number;
 }
 
 interface StaffRow {
@@ -78,7 +79,7 @@ export default function OrganizationDetailPage({ params }: { params: Promise<{ i
       const [{ data: orgData }, { data: planData }, { data: staffData }, { count: sessions }, { count: customers }] =
         await Promise.all([
           supabase.from("organizations").select("id, name, slug, status, plan_id, created_at, ai_credits_remaining").eq("id", id).maybeSingle(),
-          supabase.from("plans").select("id, name").eq("is_active", true).order("price_cents", { ascending: true }),
+          supabase.from("plans").select("id, name, ai_credits_included").eq("is_active", true).order("price_cents", { ascending: true }),
           supabase
             .from("staff")
             .select("id, name, email, role, is_active, deleted_at")
@@ -113,8 +114,15 @@ export default function OrganizationDetailPage({ params }: { params: Promise<{ i
     if (!org) return;
     setSavingPlan(true);
     const supabase = createSupabaseBrowserClient();
-    const { error } = await supabase.from("organizations").update({ plan_id: planId }).eq("id", org.id);
-    if (!error) setOrg({ ...org, plan_id: planId });
+    // Switching plans resets the AI credit balance to that plan's included
+    // amount -- a plan switch is the one case credits aren't a pure
+    // never-auto-refills wallet (see CreditsTab).
+    const newPlanCredits = plans.find((p) => p.id === planId)?.ai_credits_included ?? org.ai_credits_remaining;
+    const { error } = await supabase
+      .from("organizations")
+      .update({ plan_id: planId, ai_credits_remaining: newPlanCredits })
+      .eq("id", org.id);
+    if (!error) setOrg({ ...org, plan_id: planId, ai_credits_remaining: newPlanCredits });
     setSavingPlan(false);
   }
 
