@@ -14,7 +14,7 @@ import AddStaffModal from "@/features/staff/AddStaffModal";
 interface StaffRow {
   id: string;
   name: string;
-  email: string;
+  phone: string;
   role: string;
   is_active: boolean;
   deleted_at: string | null;
@@ -36,7 +36,7 @@ export default function DesignersPage() {
     Promise.all([
       supabase
         .from("staff")
-        .select("id, name, email, role, is_active, deleted_at, created_at, organization_id, organizations(name)")
+        .select("id, name, phone, role, is_active, deleted_at, created_at, organization_id, organizations(name)")
         .order("created_at", { ascending: false })
         .limit(200),
       supabase.from("organizations").select("id, name").order("name", { ascending: true }),
@@ -52,7 +52,7 @@ export default function DesignersPage() {
       if (orgFilter && s.organization_id !== orgFilter) return false;
       if (!search) return true;
       const q = search.toLowerCase();
-      return s.name.toLowerCase().includes(q) || s.email.toLowerCase().includes(q) || s.organizations?.name.toLowerCase().includes(q);
+      return s.name.toLowerCase().includes(q) || s.phone.includes(q) || s.organizations?.name.toLowerCase().includes(q);
     });
   }, [staff, search, orgFilter]);
 
@@ -65,7 +65,7 @@ export default function DesignersPage() {
       />
 
       <div className="flex flex-col sm:flex-row gap-3 sm:items-center">
-        <SearchInput value={search} onChange={setSearch} placeholder="Search by name, email, or studio…" />
+        <SearchInput value={search} onChange={setSearch} placeholder="Search by name, phone, or studio…" />
         <Select
           value={orgFilter}
           onChange={setOrgFilter}
@@ -101,7 +101,7 @@ export default function DesignersPage() {
                   <tr key={s.id} className="hover:bg-surface-2/50 transition-colors">
                     <td className="px-5 py-4">
                       <p className="text-ink font-medium">{s.name}</p>
-                      <p className="text-muted text-xs font-mono">{s.email}</p>
+                      <p className="text-muted text-xs font-mono">{s.phone}</p>
                     </td>
                     <td className="px-5 py-4">
                       <Badge tone="muted">{s.role}</Badge>
@@ -136,7 +136,7 @@ export default function DesignersPage() {
             {
               id: newStaff.id,
               name: newStaff.name,
-              email: newStaff.email,
+              phone: newStaff.phone,
               role: newStaff.role,
               is_active: true,
               deleted_at: null,

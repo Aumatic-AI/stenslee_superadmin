@@ -1,24 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { createClient } from "@supabase/supabase-js";
-import { createSupabaseBrowserClient } from "@/lib/supabase-client";
+import { DEFAULT_COUNTRY_CODE, isValidPhone, sanitizeCountryCodeInput, sanitizePhoneNumberInput } from "@/lib/phone";
 import Modal from "@/components/ui/Modal";
 import Input from "@/components/ui/Input";
 import Button from "@/components/ui/Button";
-
-// A stateless client (no session persistence) so signUp() below can't
-// clobber the *current* platform admin's own cookie-based session — signUp
-// signs the browser in as the newly created user by default, which would
-// otherwise silently switch the person filling out this form to the new
-// account they just created.
-function createStatelessClient() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    { auth: { persistSession: false, autoRefreshToken: false } }
-  );
-}
 
 export default function AddPlatformAdminModal({
   open,
@@ -30,45 +16,36 @@ export default function AddPlatformAdminModal({
   onCreated: () => void;
 }) {
   const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const [phoneCountryCode, setPhoneCountryCode] = useState(DEFAULT_COUNTRY_CODE);
+  const [phoneNumber, setPhoneNumber] = useState("");
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!name.trim() || !email.trim() || password.length < 6) {
-      setError("Name, email, and a password of at least 6 characters are required.");
+    if (!name.trim() || !isValidPhone(phoneCountryCode, phoneNumber)) {
+      setError("Name and a valid phone number are required.");
       return;
     }
     setSaving(true);
     setError("");
 
-    const authClient = createStatelessClient();
-    const { data, error: signUpError } = await authClient.auth.signUp({ email: email.trim(), password });
-
-    if (signUpError || !data.user) {
-      setError(signUpError?.message ?? "Could not create the account.");
-      setSaving(false);
-      return;
-    }
-
-    const supabase = createSupabaseBrowserClient();
-    const { error: insertError } = await supabase.from("platform_admins").insert({
-      id: data.user.id,
-      email: email.trim(),
-      name: name.trim(),
+    const res = await fetch("/api/platform-admins", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: name.trim(), phoneCountryCode, phoneNumber }),
     });
-
+    const body = await res.json();
     setSaving(false);
-    if (insertError) {
-      setError(insertError.message);
+
+    if (!res.ok) {
+      setError(body.error ?? "Could not create the account.");
       return;
     }
 
     setName("");
-    setEmail("");
-    setPassword("");
+    setPhoneCountryCode(DEFAULT_COUNTRY_CODE);
+    setPhoneNumber("");
     onCreated();
   }
 
@@ -76,22 +53,24 @@ export default function AddPlatformAdminModal({
     <Modal open={open} onClose={onClose} title="Add Platform Admin">
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         <Input label="Name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Jane Doe" />
-        <Input
-          label="Email"
-          type="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          placeholder="jane@stenslee.com"
-        />
-        <Input
-          label="Temporary Password"
-          type="password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          placeholder="At least 6 characters"
-        />
+        <div className="flex flex-col gap-1.5">
+          <span className="text-xs font-mono tracking-[0.15em] uppercase text-muted">Phone Number</span>
+          <div className="flex gap-2">
+            <Input
+              className="w-16 text-center"
+              value={phoneCountryCode}
+              onChange={(e) => setPhoneCountryCode(sanitizeCountryCodeInput(e.target.value))}
+            />
+            <Input
+              className="flex-1"
+              value={phoneNumber}
+              onChange={(e) => setPhoneNumber(sanitizePhoneNumberInput(e.target.value))}
+              placeholder="98765 43210"
+            />
+          </div>
+        </div>
         <p className="text-muted text-xs">
-          If this project requires email confirmation, they&apos;ll need to confirm before signing in.
+          They&apos;ll log in with this phone number via a WhatsApp code.
         </p>
         {error && <p className="text-error text-sm font-mono">{error}</p>}
         <Button type="submit" loading={saving} fullWidth>

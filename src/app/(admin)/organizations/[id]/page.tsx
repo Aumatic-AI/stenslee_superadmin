@@ -32,7 +32,7 @@ interface Plan {
 interface StaffRow {
   id: string;
   name: string;
-  email: string;
+  phone: string;
   role: string;
   is_active: boolean;
   deleted_at: string | null;
@@ -82,7 +82,7 @@ export default function OrganizationDetailPage({ params }: { params: Promise<{ i
           supabase.from("plans").select("id, name, ai_credits_included").eq("is_active", true).order("price_cents", { ascending: true }),
           supabase
             .from("staff")
-            .select("id, name, email, role, is_active, deleted_at")
+            .select("id, name, phone, role, is_active, deleted_at")
             .eq("organization_id", id)
             .order("created_at", { ascending: true }),
           supabase.from("sessions").select("id", { count: "exact", head: true }).eq("organization_id", id).is("deleted_at", null),

@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { createClient } from "@supabase/supabase-js";
 import { createSupabaseBrowserClient } from "@/lib/supabase-client";
+import { DEFAULT_COUNTRY_CODE, isValidPhone, sanitizeCountryCodeInput, sanitizePhoneNumberInput } from "@/lib/phone";
 import Modal from "@/components/ui/Modal";
 import Input from "@/components/ui/Input";
 import Button from "@/components/ui/Button";
@@ -11,7 +11,7 @@ import Select from "@/components/ui/Select";
 interface NewStaff {
   id: string;
   name: string;
-  email: string;
+  phone: string;
   role: "admin" | "designer";
   organization_id: string;
 }
@@ -26,24 +26,13 @@ interface Props {
   fixedOrganizationName?: string;
 }
 
-// Stateless client (no session persistence) so signUp() below can't
-// clobber the *acting* platform admin's own cookie-based session -- see
-// AddPlatformAdminModal for the same pattern and rationale.
-function createStatelessClient() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    { auth: { persistSession: false, autoRefreshToken: false } }
-  );
-}
-
 export default function AddStaffModal({ open, onClose, onCreated, fixedOrganizationId, fixedOrganizationName }: Props) {
   const [organizations, setOrganizations] = useState<{ value: string; label: string }[]>([]);
   const [organizationId, setOrganizationId] = useState(fixedOrganizationId ?? "");
   const [role, setRole] = useState<"admin" | "designer">("designer");
   const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const [phoneCountryCode, setPhoneCountryCode] = useState(DEFAULT_COUNTRY_CODE);
+  const [phoneNumber, setPhoneNumber] = useState("");
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
 
@@ -53,8 +42,8 @@ export default function AddStaffModal({ open, onClose, onCreated, fixedOrganizat
 
     async function init() {
       setName("");
-      setEmail("");
-      setPassword("");
+      setPhoneCountryCode(DEFAULT_COUNTRY_CODE);
+      setPhoneNumber("");
       setRole("designer");
       setOrganizationId(fixedOrganizationId ?? "");
       setError("");
@@ -69,7 +58,7 @@ export default function AddStaffModal({ open, onClose, onCreated, fixedOrganizat
     return () => { cancelled = true; };
   }, [open, fixedOrganizationId]);
 
-  const canSubmit = name.trim().length > 0 && email.trim().length > 0 && password.length >= 6 && organizationId.length > 0;
+  const canSubmit = name.trim().length > 0 && isValidPhone(phoneCountryCode, phoneNumber) && organizationId.length > 0;
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -77,31 +66,20 @@ export default function AddStaffModal({ open, onClose, onCreated, fixedOrganizat
     setSaving(true);
     setError("");
 
-    const authClient = createStatelessClient();
-    const { data, error: signUpError } = await authClient.auth.signUp({ email: email.trim(), password });
-
-    if (signUpError || !data.user) {
-      setError(signUpError?.message ?? "Could not create the account.");
-      setSaving(false);
-      return;
-    }
-
-    const supabase = createSupabaseBrowserClient();
-    const { error: insertError } = await supabase.from("staff").insert({
-      id: data.user.id,
-      organization_id: organizationId,
-      email: email.trim(),
-      name: name.trim(),
-      role,
+    const res = await fetch("/api/staff", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: name.trim(), role, organizationId, phoneCountryCode, phoneNumber }),
     });
-
+    const body = await res.json();
     setSaving(false);
-    if (insertError) {
-      setError(insertError.message);
+
+    if (!res.ok) {
+      setError(body.error ?? "Could not create the account.");
       return;
     }
 
-    onCreated({ id: data.user.id, name: name.trim(), email: email.trim(), role, organization_id: organizationId });
+    onCreated(body.staff as NewStaff);
   }
 
   return (
@@ -143,22 +121,24 @@ export default function AddStaffModal({ open, onClose, onCreated, fixedOrganizat
         </div>
 
         <Input label="Name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Jane Doe" />
-        <Input
-          label="Email"
-          type="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          placeholder="jane@studio.com"
-        />
-        <Input
-          label="Temporary Password"
-          type="password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          placeholder="At least 6 characters"
-        />
+        <div className="flex flex-col gap-1.5">
+          <span className="text-xs font-mono tracking-[0.15em] uppercase text-muted">Phone Number</span>
+          <div className="flex gap-2">
+            <Input
+              className="w-16 text-center"
+              value={phoneCountryCode}
+              onChange={(e) => setPhoneCountryCode(sanitizeCountryCodeInput(e.target.value))}
+            />
+            <Input
+              className="flex-1"
+              value={phoneNumber}
+              onChange={(e) => setPhoneNumber(sanitizePhoneNumberInput(e.target.value))}
+              placeholder="98765 43210"
+            />
+          </div>
+        </div>
         <p className="text-muted text-xs">
-          If this project requires email confirmation, they&apos;ll need to confirm before signing in.
+          They&apos;ll log in with this phone number via a WhatsApp code.
         </p>
 
         {error && <p className="text-error text-sm font-mono">{error}</p>}

@@ -10,7 +10,7 @@ import AddStaffModal from "@/features/staff/AddStaffModal";
 interface StaffRow {
   id: string;
   name: string;
-  email: string;
+  phone: string;
   role: string;
   is_active: boolean;
   deleted_at: string | null;
@@ -42,7 +42,7 @@ export default function StaffTab({ organizationId, organizationName, staff, onSt
             <div key={member.id} className="flex items-center justify-between py-3">
               <div className="min-w-0">
                 <p className="text-ink text-sm font-semibold truncate">{member.name}</p>
-                <p className="text-muted text-xs font-mono truncate">{member.email}</p>
+                <p className="text-muted text-xs font-mono truncate">{member.phone}</p>
               </div>
               <div className="flex items-center gap-2">
                 <Badge tone="muted">{member.role}</Badge>
@@ -68,7 +68,7 @@ export default function StaffTab({ organizationId, organizationName, staff, onSt
           onStaffAdded({
             id: newStaff.id,
             name: newStaff.name,
-            email: newStaff.email,
+            phone: newStaff.phone,
             role: newStaff.role,
             is_active: true,
             deleted_at: null,
