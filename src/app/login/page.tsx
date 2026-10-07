@@ -2,6 +2,7 @@
 
 import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import Image from "next/image";
 import { createSupabaseBrowserClient } from "@/lib/supabase-client";
 import {
   DEFAULT_COUNTRY_CODE,
@@ -12,6 +13,14 @@ import {
 } from "@/lib/phone";
 import OtpInput from "@/components/ui/OtpInput";
 import { useResendCooldown } from "@/lib/use-resend-cooldown";
+
+const NOT_REGISTERED = "This number isn't registered as a Super Admin.";
+
+// Unknown numbers get "otp_disabled" from Supabase or a "not registered" refusal from the SMS hook.
+function otpErrorMessage(err: { message: string; code?: string }) {
+  if (err.code === "otp_disabled" || /(isn't|not) registered/i.test(err.message)) return NOT_REGISTERED;
+  return err.message;
+}
 
 function LoginForm() {
   const router = useRouter();
@@ -39,11 +48,15 @@ function LoginForm() {
     setSubmitError("");
 
     const supabase = createSupabaseBrowserClient();
-    const { error: otpError } = await supabase.auth.signInWithOtp({ phone: combinePhone(countryCode, phoneNumber) });
+    const { error: otpError } = await supabase.auth.signInWithOtp({
+      phone: combinePhone(countryCode, phoneNumber),
+      // Only admins added from the dashboard can sign in -- never create accounts here.
+      options: { shouldCreateUser: false },
+    });
     setLoading(false);
 
     if (otpError) {
-      setSubmitError(otpError.message);
+      setSubmitError(otpErrorMessage(otpError));
       return;
     }
     setOtp("");
@@ -90,18 +103,22 @@ function LoginForm() {
     setLoading(true);
     setSubmitError("");
     const supabase = createSupabaseBrowserClient();
-    const { error: otpError } = await supabase.auth.signInWithOtp({ phone: combinePhone(countryCode, phoneNumber) });
+    const { error: otpError } = await supabase.auth.signInWithOtp({
+      phone: combinePhone(countryCode, phoneNumber),
+      // Only admins added from the dashboard can sign in -- never create accounts here.
+      options: { shouldCreateUser: false },
+    });
     setLoading(false);
-    if (otpError) { setSubmitError(otpError.message); return; }
+    if (otpError) { setSubmitError(otpErrorMessage(otpError)); return; }
     resendCooldown.start();
   }
 
   return (
     <div className="w-full max-w-sm z-10 flex flex-col gap-8 animate-fade-up">
       <div className="flex flex-col items-center gap-3">
-        <div className="text-center">
-          <h1 className="font-cinzel text-3xl font-black tracking-[0.14em] text-gold uppercase">Stenslee</h1>
-        </div>
+        <h1>
+          <Image src="/stenslee-logo.png" alt="Stenslee" width={886} height={167} priority className="h-10 w-auto" />
+        </h1>
         <div className="flex items-center gap-3 w-full">
           <div className="flex-1 h-px bg-gradient-to-r from-transparent to-gold/30" />
           <span className="text-[10px] font-mono tracking-[0.2em] text-muted uppercase">Super Admin</span>

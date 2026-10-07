@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import { createSupabaseBrowserClient } from "@/lib/supabase-client";
 
 // Client-side fallback redirect. Normally proxy.ts (src/proxy.ts) already
@@ -46,8 +47,8 @@ export default function Home() {
         }}
       />
       <div className="flex flex-col items-center gap-4 z-10 animate-fade-up">
-        <h1 className="font-cinzel text-4xl sm:text-5xl font-black tracking-[0.14em] text-gold uppercase leading-none">
-          Stenslee
+        <h1>
+          <Image src="/stenslee-logo.png" alt="Stenslee" width={886} height={167} priority className="h-12 sm:h-16 w-auto" />
         </h1>
         <p className="text-muted text-xs tracking-[0.28em] uppercase font-cinzel">
           Super Admin

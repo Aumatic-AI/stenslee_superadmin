@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import { createSupabaseBrowserClient } from "@/lib/supabase-client";
 import SidebarNav, { NAV_ITEMS, isActive } from "./Sidebar";
@@ -80,9 +81,9 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
   return (
     <div className="h-[100dvh] min-h-0 bg-bg flex flex-col lg:flex-row overflow-hidden">
       <aside className="hidden lg:flex lg:flex-col w-64 flex-shrink-0 min-h-0 border-r border-cleo-border bg-surface/40 px-4 py-6 gap-6 overflow-y-auto">
-        <div className="px-2">
-          <p className="font-cinzel text-sm font-bold tracking-[0.15em] text-gold uppercase leading-none">Stenslee</p>
-          <p className="text-[10px] font-mono text-muted tracking-wider leading-none mt-1">Super Admin</p>
+        <div className="px-2 flex flex-col gap-1.5">
+          <Image src="/stenslee-logo.png" alt="Stenslee" width={886} height={167} className="h-6 w-auto self-start" />
+          <p className="text-[10px] font-mono text-muted tracking-wider leading-none">Super Admin</p>
         </div>
 
         <SidebarNav />
@@ -108,7 +109,10 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
 
       <div className="lg:hidden border-b border-cleo-border bg-surface/40 flex-shrink-0">
         <div className="flex items-center justify-between px-4 pt-4 pb-2">
-          <p className="font-cinzel text-[11px] font-bold tracking-[0.15em] text-gold uppercase leading-none">Stenslee Admin</p>
+          <div className="flex items-center gap-2">
+            <Image src="/stenslee-logo.png" alt="Stenslee" width={886} height={167} className="h-5 w-auto" />
+            <span className="text-[10px] font-mono text-muted tracking-wider">Admin</span>
+          </div>
           <button
             onClick={handleLogout}
             className="text-muted hover:text-error transition-colors text-[10px] font-mono tracking-wider px-2.5 py-1.5 rounded-lg border border-cleo-border cursor-pointer"
