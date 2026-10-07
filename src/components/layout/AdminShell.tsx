@@ -9,7 +9,7 @@ import SidebarNav, { NAV_ITEMS, isActive } from "./Sidebar";
 
 interface AdminIdentity {
   name: string;
-  phone: string;
+  email: string;
 }
 
 export default function AdminShell({ children }: { children: React.ReactNode }) {
@@ -29,7 +29,7 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
 
       const { data: platformAdmin } = await supabase
         .from("platform_admins")
-        .select("name, phone, is_active")
+        .select("name, email, is_active")
         .eq("id", user.id)
         .maybeSingle();
 
@@ -95,7 +95,7 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
             </div>
             <div className="min-w-0">
               <p className="text-ink text-xs font-semibold truncate">{admin.name}</p>
-              <p className="text-muted text-[9px] font-mono truncate">{admin.phone}</p>
+              <p className="text-muted text-[9px] font-mono truncate">{admin.email}</p>
             </div>
           </div>
           <button

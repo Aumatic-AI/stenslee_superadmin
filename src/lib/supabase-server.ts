@@ -34,7 +34,7 @@ export function createServiceClient() {
 
 export interface PlatformAdmin {
   id: string;
-  phone: string;
+  email: string;
   name: string;
   is_active: boolean;
 }
@@ -47,7 +47,7 @@ export async function getPlatformAdminSession(): Promise<PlatformAdmin | null> {
 
   const { data: admin } = await supabase
     .from("platform_admins")
-    .select("id, phone, name, is_active")
+    .select("id, email, name, is_active")
     .eq("id", user.id)
     .maybeSingle();
 

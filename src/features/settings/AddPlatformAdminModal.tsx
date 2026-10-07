@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { DEFAULT_COUNTRY_CODE, isValidPhone, sanitizeCountryCodeInput, sanitizePhoneNumberInput } from "@/lib/phone";
 import Modal from "@/components/ui/Modal";
 import Input from "@/components/ui/Input";
 import Button from "@/components/ui/Button";
@@ -16,15 +15,15 @@ export default function AddPlatformAdminModal({
   onCreated: () => void;
 }) {
   const [name, setName] = useState("");
-  const [phoneCountryCode, setPhoneCountryCode] = useState(DEFAULT_COUNTRY_CODE);
-  const [phoneNumber, setPhoneNumber] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!name.trim() || !isValidPhone(phoneCountryCode, phoneNumber)) {
-      setError("Name and a valid phone number are required.");
+    if (!name.trim() || !email.trim() || password.length < 8) {
+      setError("Name, email, and a password of at least 8 characters are required.");
       return;
     }
     setSaving(true);
@@ -33,7 +32,7 @@ export default function AddPlatformAdminModal({
     const res = await fetch("/api/platform-admins", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: name.trim(), phoneCountryCode, phoneNumber }),
+      body: JSON.stringify({ name: name.trim(), email: email.trim(), password }),
     });
     const body = await res.json();
     setSaving(false);
@@ -44,8 +43,8 @@ export default function AddPlatformAdminModal({
     }
 
     setName("");
-    setPhoneCountryCode(DEFAULT_COUNTRY_CODE);
-    setPhoneNumber("");
+    setEmail("");
+    setPassword("");
     onCreated();
   }
 
@@ -53,24 +52,23 @@ export default function AddPlatformAdminModal({
     <Modal open={open} onClose={onClose} title="Add Platform Admin">
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         <Input label="Name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Jane Doe" />
-        <div className="flex flex-col gap-1.5">
-          <span className="text-xs font-mono tracking-[0.15em] uppercase text-muted">Phone Number</span>
-          <div className="flex gap-2">
-            <Input
-              className="w-16 text-center"
-              value={phoneCountryCode}
-              onChange={(e) => setPhoneCountryCode(sanitizeCountryCodeInput(e.target.value))}
-            />
-            <Input
-              className="flex-1"
-              value={phoneNumber}
-              onChange={(e) => setPhoneNumber(sanitizePhoneNumberInput(e.target.value))}
-              placeholder="98765 43210"
-            />
-          </div>
-        </div>
+        <Input
+          label="Email"
+          type="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          placeholder="jane@stenslee.com"
+        />
+        <Input
+          label="Temporary Password"
+          type="password"
+          autoComplete="new-password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          placeholder="At least 8 characters"
+        />
         <p className="text-muted text-xs">
-          They&apos;ll log in with this phone number via a WhatsApp code.
+          Share these with them; they can change the password in Settings after signing in.
         </p>
         {error && <p className="text-error text-sm font-mono">{error}</p>}
         <Button type="submit" loading={saving} fullWidth>

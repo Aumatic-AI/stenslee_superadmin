@@ -1,10 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseServerClient, createServiceClient } from "@/lib/supabase-server";
-import { isValidPhone, combinePhone } from "@/lib/phone";
 
-// POST /api/platform-admins — create a new platform admin account (platform
-// admin only). Needs the service role (phone-based admin.createUser), so
-// this can't run client-side the way the old email+password signUp() did.
+const MIN_PASSWORD_LENGTH = 8;
+
+// POST /api/platform-admins — create an email + password platform admin (platform admin only).
 export async function POST(req: NextRequest) {
   const supabase = await createSupabaseServerClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -14,14 +13,20 @@ export async function POST(req: NextRequest) {
   const { data: requester } = await service.from("platform_admins").select("is_active").eq("id", user.id).maybeSingle();
   if (!requester?.is_active) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
-  const { name, phoneCountryCode, phoneNumber } = await req.json();
-  if (!name?.trim() || !isValidPhone(phoneCountryCode, phoneNumber)) {
-    return NextResponse.json({ error: "name and a valid phone number are required" }, { status: 400 });
+  const { name, email, password } = await req.json();
+  const cleanEmail = typeof email === "string" ? email.trim().toLowerCase() : "";
+  if (!name?.trim() || !/^\S+@\S+\.\S+$/.test(cleanEmail) || typeof password !== "string" || password.length < MIN_PASSWORD_LENGTH) {
+    return NextResponse.json(
+      { error: `Name, a valid email and a password of at least ${MIN_PASSWORD_LENGTH} characters are required.` },
+      { status: 400 }
+    );
   }
 
+  // Server-side create: confirmed straight away and doesn't touch the current admin's session.
   const { data: authData, error: authError } = await service.auth.admin.createUser({
-    phone: combinePhone(phoneCountryCode, phoneNumber),
-    phone_confirm: true,
+    email: cleanEmail,
+    password,
+    email_confirm: true,
   });
 
   if (authError || !authData.user) {
@@ -30,7 +35,7 @@ export async function POST(req: NextRequest) {
 
   const { data: adminRow, error: adminError } = await service
     .from("platform_admins")
-    .insert({ id: authData.user.id, phone_country_code: phoneCountryCode, phone_number: phoneNumber, name: name.trim() })
+    .insert({ id: authData.user.id, email: cleanEmail, name: name.trim() })
     .select()
     .single();
 
