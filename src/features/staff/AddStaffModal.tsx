@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { createSupabaseBrowserClient } from "@/lib/supabase-client";
-import { DEFAULT_COUNTRY_CODE, isValidPhone, sanitizeCountryCodeInput, sanitizePhoneNumberInput } from "@/lib/phone";
+import { DEFAULT_COUNTRY_CODE, isValidPhone } from "@/lib/phone";
+import PhoneInput from "@/components/ui/PhoneInput";
 import Modal from "@/components/ui/Modal";
 import Input from "@/components/ui/Input";
 import Button from "@/components/ui/Button";
@@ -123,19 +124,12 @@ export default function AddStaffModal({ open, onClose, onCreated, fixedOrganizat
         <Input label="Name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Jane Doe" />
         <div className="flex flex-col gap-1.5">
           <span className="text-xs font-mono tracking-[0.15em] uppercase text-muted">Phone Number</span>
-          <div className="flex gap-2">
-            <Input
-              className="w-16 text-center"
-              value={phoneCountryCode}
-              onChange={(e) => setPhoneCountryCode(sanitizeCountryCodeInput(e.target.value))}
-            />
-            <Input
-              className="flex-1"
-              value={phoneNumber}
-              onChange={(e) => setPhoneNumber(sanitizePhoneNumberInput(e.target.value))}
-              placeholder="98765 43210"
-            />
-          </div>
+          <PhoneInput
+            countryCode={phoneCountryCode}
+            phoneNumber={phoneNumber}
+            onCountryCodeChange={setPhoneCountryCode}
+            onPhoneNumberChange={setPhoneNumber}
+          />
         </div>
         <p className="text-muted text-xs">
           They&apos;ll log in with this phone number via a WhatsApp code.

@@ -6,7 +6,8 @@ import Modal from "@/components/ui/Modal";
 import Input from "@/components/ui/Input";
 import Button from "@/components/ui/Button";
 import Select from "@/components/ui/Select";
-import { DEFAULT_COUNTRY_CODE, combinePhone, isValidPhone, sanitizeCountryCodeInput, sanitizePhoneNumberInput } from "@/lib/phone";
+import { DEFAULT_COUNTRY_CODE, combinePhone, isValidPhone } from "@/lib/phone";
+import PhoneInput from "@/components/ui/PhoneInput";
 
 interface NewCustomer {
   id: string;
@@ -119,24 +120,12 @@ export default function AddCustomerModal({ open, onClose, onCreated, fixedOrgani
         <Input label="Full Name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Customer full name" />
         <div className="flex flex-col gap-1.5">
           <span className="text-xs font-mono tracking-[0.15em] uppercase text-muted">Phone</span>
-          <div className="flex gap-2">
-            <Input
-              type="tel"
-              inputMode="tel"
-              value={countryCode}
-              onChange={(e) => setCountryCode(sanitizeCountryCodeInput(e.target.value))}
-              placeholder="+91"
-              className="w-20 flex-shrink-0 text-center"
-            />
-            <Input
-              type="tel"
-              inputMode="numeric"
-              value={phoneNumber}
-              onChange={(e) => setPhoneNumber(sanitizePhoneNumberInput(e.target.value))}
-              placeholder="98765 43210"
-              className="flex-1 min-w-0"
-            />
-          </div>
+          <PhoneInput
+            countryCode={countryCode}
+            phoneNumber={phoneNumber}
+            onCountryCodeChange={setCountryCode}
+            onPhoneNumberChange={setPhoneNumber}
+          />
         </div>
 
         {error && <p className="text-error text-sm font-mono">{error}</p>}

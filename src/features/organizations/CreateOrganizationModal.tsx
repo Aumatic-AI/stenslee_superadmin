@@ -30,6 +30,7 @@ export default function CreateOrganizationModal({
 }) {
   const [plans, setPlans] = useState<Plan[]>([]);
   const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
   const [slug, setSlug] = useState("");
   const [slugTouched, setSlugTouched] = useState(false);
   const [planId, setPlanId] = useState("");
@@ -42,6 +43,7 @@ export default function CreateOrganizationModal({
 
     async function init() {
       setName("");
+      setEmail("");
       setSlug("");
       setSlugTouched(false);
       setPlanId("");
@@ -66,6 +68,10 @@ export default function CreateOrganizationModal({
       setError("Name and slug are required.");
       return;
     }
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email.trim())) {
+      setError("Enter a valid email address.");
+      return;
+    }
     setSaving(true);
     setError("");
 
@@ -74,6 +80,7 @@ export default function CreateOrganizationModal({
       .from("organizations")
       .insert({
         name: name.trim(),
+        email: email.trim().toLowerCase(),
         slug: slug.trim(),
         plan_id: planId || null,
       })
@@ -92,7 +99,7 @@ export default function CreateOrganizationModal({
 
   return (
     <Modal open={open} onClose={onClose} title="New Organization">
-      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+      <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-4">
         <Input
           label="Studio Name"
           value={name}
@@ -101,6 +108,14 @@ export default function CreateOrganizationModal({
             if (!slugTouched) setSlug(slugify(e.target.value));
           }}
           placeholder="e.g. Golden Needle Tattoo"
+        />
+        <Input
+          label="Email"
+          type="email"
+          autoComplete="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          placeholder="hello@goldenneedle.com"
         />
         <Input
           label="Slug"
